@@ -1,0 +1,23 @@
+name: DevSecOps Pipeline
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+
+  sast-semgrep:
+    name: SAST - Semgrep
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: Ejecutar Semgrep
+        run: |
+          docker run --rm \
+            -v "$PWD:/src" \
+            semgrep/semgrep \
+            semgrep scan --config auto /src
