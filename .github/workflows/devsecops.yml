@@ -33,14 +33,18 @@ jobs:
       - name: Ejecutar OWASP Dependency-Check
         run: |
           mkdir -p dependency-check-report
+          mkdir -p dependency-check-data
+
           docker run --rm \
             -v "$PWD:/src" \
             -v "$PWD/dependency-check-report:/report" \
+            -v "$PWD/dependency-check-data:/usr/share/dependency-check/data" \
             owasp/dependency-check:latest \
             --scan /src \
             --format HTML \
             --out /report \
-            --project "OWASP Juice Shop"
+            --project "OWASP Juice Shop" \
+            --nvdApiDelay 8000
 
       - name: Publicar informe Dependency-Check
         if: always()
