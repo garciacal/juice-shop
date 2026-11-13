@@ -23,34 +23,35 @@ export function servePublicFiles () {
   }
 
   function verify (file: string, res: Response, next: NextFunction) {
-    if (file && (endsWithAllowlistedFileType(file) || (file === 'incident-support.kdbx'))) {
-      file = security.cutOffPoisonNullByte(file)
+    const sanitizedFile = security.cutOffPoisonNullByte(file)
+    const ftpDirectory = path.resolve('ftp')
+    const requestedFile = path.resolve(ftpDirectory, sanitizedFile)
 
-      challengeUtils.solveIf(challenges.directoryListingChallenge, () => { return file.toLowerCase() === 'acquisitions.md' })
-      verifySuccessfulPoisonNullByteExploit(file)
+    const isSafeFileName =
+      sanitizedFile === path.basename(sanitizedFile) &&
+      !sanitizedFile.includes('..') &&
+      !sanitizedFile.includes('/') &&
+      !sanitizedFile.includes('\\') &&
+      !sanitizedFile.includes('\0')
 
-      res.sendFile(path.resolve('ftp/', file))
-    } else {
+    const isInsideFtpDirectory =
+      requestedFile.startsWith(ftpDirectory + path.sep)
+
+    const hasAllowedType =
+      endsWithAllowlistedFileType(sanitizedFile) ||
+      sanitizedFile === 'incident-support.kdbx'
+
+    if (!isSafeFileName || !isInsideFtpDirectory || !hasAllowedType) {
       res.status(403)
-      next(new Error('Only .md and .pdf files are allowed!'))
+      next(new Error('Invalid or unauthorized file name.'))
+      return
     }
-  }
 
-  function verifySuccessfulPoisonNullByteExploit (file: string) {
-    challengeUtils.solveIf(challenges.easterEggLevelOneChallenge, () => { return file.toLowerCase() === 'eastere.gg' })
-    challengeUtils.solveIf(challenges.forgottenDevBackupChallenge, () => { return file.toLowerCase() === 'package.json.bak' })
-    challengeUtils.solveIf(challenges.forgottenBackupChallenge, () => { return file.toLowerCase() === 'coupons_2013.md.bak' })
-    challengeUtils.solveIf(challenges.misplacedSignatureFileChallenge, () => { return file.toLowerCase() === 'suspicious_errors.yml' })
-
-    challengeUtils.solveIf(challenges.nullByteChallenge, () => {
-      const previouslySolvedViaPoisonNullByte = [
-        challenges.easterEggLevelOneChallenge.solved,
-        challenges.forgottenDevBackupChallenge.solved,
-        challenges.forgottenBackupChallenge.solved,
-        challenges.misplacedSignatureFileChallenge.solved
-      ].some(Boolean)
-      return previouslySolvedViaPoisonNullByte || file.toLowerCase() === 'encrypt.pyc'
+    challengeUtils.solveIf(challenges.directoryListingChallenge, () => {
+      return sanitizedFile.toLowerCase() === 'acquisitions.md'
     })
+
+    res.sendFile(requestedFile)
   }
 
   function endsWithAllowlistedFileType (param: string) {
