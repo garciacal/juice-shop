@@ -22,33 +22,18 @@ jobs:
             semgrep/semgrep \
             semgrep scan --config auto /src
 
-  sca-dependency-check:
-    name: SCA - OWASP Dependency-Check
+  secret-analysis:
+    name: Secret Analysis - Gitleaks
     runs-on: ubuntu-latest
 
     steps:
       - name: Descargar codigo
         uses: actions/checkout@v4
-
-      - name: Ejecutar OWASP Dependency-Check
-        run: |
-          mkdir -p dependency-check-report
-          mkdir -p dependency-check-data
-
-          docker run --rm \
-            -v "$PWD:/src" \
-            -v "$PWD/dependency-check-report:/report" \
-            -v "$PWD/dependency-check-data:/usr/share/dependency-check/data" \
-            owasp/dependency-check:latest \
-            --scan /src \
-            --format HTML \
-            --out /report \
-            --project "OWASP Juice Shop" \
-            --nvdApiDelay 8000
-
-      - name: Publicar informe Dependency-Check
-        if: always()
-        uses: actions/upload-artifact@v4
         with:
-          name: dependency-check-report
-          path: dependency-check-report/
+          fetch-depth: 0
+
+      - name: Ejecutar Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
