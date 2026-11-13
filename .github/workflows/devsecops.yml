@@ -61,3 +61,44 @@ jobs:
           ignore-unfixed: false
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
+
+  dast-zap:
+    name: DAST - OWASP ZAP Baseline
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: Construir imagen Docker
+        run: |
+          docker build -t juice-shop-dast .
+
+      - name: Desplegar Juice Shop
+        run: |
+          docker run -d \
+            --name juice-shop-dast \
+            -p 3000:3000 \
+            juice-shop-dast
+
+      - name: Esperar a que Juice Shop este disponible
+        run: |
+          for i in {1..30}; do
+            if curl -f http://127.0.0.1:3000 >/dev/null 2>&1; then
+              echo "Juice Shop esta disponible"
+              exit 0
+            fi
+            echo "Esperando a Juice Shop..."
+            sleep 5
+          done
+          echo "Juice Shop no ha arrancado"
+          docker logs juice-shop-dast
+          exit 1
+
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: 'http://172.17.0.1:3000'
+          fail_action: false
+          allow_issue_writing: false
+          artifact_name: 'zap-baseline-report'
