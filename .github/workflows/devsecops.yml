@@ -37,3 +37,27 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  docker-trivy:
+    name: Docker Build & Trivy Scan
+    runs-on: ubuntu-latest
+
+
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+
+      - name: Construir imagen Docker de Juice Shop
+        run: |
+          docker build -t juice-shop-secure:${{ github.sha }} .
+
+
+      - name: Escanear imagen con Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: 'juice-shop-secure:${{ github.sha }}'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: false
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
